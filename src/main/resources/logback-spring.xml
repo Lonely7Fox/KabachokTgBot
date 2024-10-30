@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration scan="true" scanPeriod="30 seconds">
     <!-- use Spring default values -->
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+<!--    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>-->
 
-    <property name="HOME_LOG" value="/var/log/KabachokTgBot/"/>
+    <define name="log_dir" class="io.project.KabachokTgBot.logback.LogDirProperty"/>
+    <define name="log_name" class="io.project.KabachokTgBot.logback.LogNameProperty"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -12,9 +13,9 @@
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${HOME_LOG}/app.log"</file>
+        <file>${log_dir}${file.separator}${log_name}</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${HOME_LOG}/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>${log_dir}${file.separator}app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <!-- each archived file, size max 10MB -->
             <maxFileSize>10MB</maxFileSize>
             <!-- total size of all archive files, if total size > 20GB, it will delete old archived file -->
@@ -29,18 +30,24 @@
         </encoder>
     </appender>
 
-    <logger name="io.proj3ct.KabachokTgBot" level="debug" additivity="false">
+    <appender name="asynclogfile" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="FILE"/>
+        <queueSize>1024</queueSize>
+        <maxFlushTime>2000</maxFlushTime>
+    </appender>
+
+    <logger name="io.project.KabachokTgBot" level="debug" additivity="false">
+        <appender-ref ref="asynclogfile"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
 
     <root level="error">
-        <appender-ref ref="FILE"/>
+        <appender-ref ref="asynclogfile"/>
         <appender-ref ref="CONSOLE"/>
     </root>
 
     <root level="info">
-        <appender-ref ref="FILE"/>
+        <appender-ref ref="asynclogfile"/>
         <appender-ref ref="CONSOLE"/>
     </root>
 
