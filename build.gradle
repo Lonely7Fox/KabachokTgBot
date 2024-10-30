@@ -1,0 +1,81 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.0'
+	id 'io.spring.dependency-management' version '1.1.5'
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'io.project'
+version = '1.0.0'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+
+	// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.3.0'
+
+	// https://mvnrepository.com/artifact/org.postgresql/postgresql
+	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.3'
+
+	// https://mvnrepository.com/artifact/org.telegram/telegrambots
+	implementation ('org.telegram:telegrambots:6.9.7.1') {
+		exclude group: 'com.fasterxml.jackson.module', module: 'jackson-module-jaxb-annotations'
+	}
+
+	// https://mvnrepository.com/artifact/com.vdurmont/emoji-java
+	implementation 'com.vdurmont:emoji-java:5.1.1'
+
+	// https://mvnrepository.com/artifact/org.projectlombok/lombok
+	compileOnly 'org.projectlombok:lombok:1.18.32'
+	annotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+	// https://mvnrepository.com/artifact/jakarta.xml.bind/jakarta.xml.bind-api
+	implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.2'
+
+	// https://mvnrepository.com/artifact/org.springframework/spring-context-support
+	implementation group: 'org.springframework', name: 'spring-context-support', version: '6.1.12'
+
+
+	implementation('org.quartz-scheduler:quartz:2.5.0-rc1') {
+		exclude group: 'com.mchange', module: 'c3p0'
+		exclude group: 'com.zaxxer', module: 'HikariCP-java7'
+		exclude group: 'org.slf4j', module: 'slf4j-api'
+		exclude group: 'jakarta.activation', module: 'jakarta.activation-api'
+	}
+
+	testCompileOnly 'org.projectlombok:lombok:1.18.32'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.32'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+tasks.named('jar') {
+	enabled = true
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+jar {
+	manifest {
+		attributes(
+				'Main-Class': 'io.project.KabachokTgBot.SpringApplication'
+		)
+	}
+}
