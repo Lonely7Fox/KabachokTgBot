@@ -16,7 +16,12 @@ public class SimpleMessageJob implements Job {
         TelegramBot telegramBot = (TelegramBot) dataMap.get("telegramBot");
         long chatId = dataMap.getLong("chatId");
         String message = dataMap.getString("message");
+        boolean isSilent = dataMap.getBoolean("isSilent");
 
-        telegramBot.sendMessage(chatId, message);
+        if (isSilent) {
+            telegramBot.sendSilentMessage(chatId, message);
+        } else {
+            telegramBot.sendMessage(chatId, message);
+        }
     }
 }

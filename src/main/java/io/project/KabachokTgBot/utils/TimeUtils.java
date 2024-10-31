@@ -2,12 +2,14 @@ package io.project.KabachokTgBot.utils;
 
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Optional;
 
 public class TimeUtils {
 
@@ -29,6 +31,23 @@ public class TimeUtils {
         return timestamp.after(startDayTime()) && timestamp.before(endDayTime());
     }
 
+    public static Optional<Timestamp> checkAndGetDurationToEndDay(Timestamp timestamp) {
+//        if (timestamp.after(startDayTime()) && timestamp.before(endDayTime())) {
+//            String duration = getFormattedDuration(Duration.between(timestamp.toInstant(), endDayTime().toInstant()));
+//            return Optional.of(duration);
+//        }
+//        return Optional.empty();
+        return timestamp.after(startDayTime()) && timestamp.before(endDayTime()) ? Optional.of(timestamp) : Optional.empty();
+    }
+
+    public static String getFormattedDuration(Duration duration) {
+        // Получаем количество дней, часов и минут
+        long hours = duration.toHours() % 24; // Остаток от деления на 24 для часов
+        long minutes = duration.toMinutes() % 60; // Остаток от деления на 60 для минут
+        // Форматируем вывод
+        return String.format("%d:%d", hours, minutes);
+    }
+
     public static boolean checkThisMonth(Timestamp timestamp) {
         LocalDate start = today().withDayOfMonth(1);
         LocalDate end = start.plusMonths(1);
@@ -47,14 +66,14 @@ public class TimeUtils {
         return months[month.getValue()];
     }
 
-    private static Timestamp startDayTime() {
+    public static Timestamp startDayTime() {
         LocalDate today = today();
         LocalDateTime startOfDay = today.atStartOfDay(zoneId).toLocalDateTime();
         Instant startOfDayTimestamp = startOfDay.toInstant(zoneOffset);
         return Timestamp.from(startOfDayTimestamp);
     }
 
-    private static Timestamp endDayTime() {
+    public static Timestamp endDayTime() {
         LocalDateTime endOfDay = today().atTime(23, 59, 59);
         Instant endOfDayTimestamp = endOfDay.toInstant(zoneOffset);
         return Timestamp.from(endOfDayTimestamp);

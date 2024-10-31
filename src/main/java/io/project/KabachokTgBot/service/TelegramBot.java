@@ -37,6 +37,8 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeAllPrivateChats;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.sql.Timestamp;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -69,16 +71,34 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final SystemScheduler scheduler;
 
     private static final String RULES =
-            "Правила игры Пидор Дня (только для групповых чатов):\n" +
-            "1. Зарегистрируйтесь в игру по команде /pidoreg\n" +
-            "2. Подождите пока зарегиструются все (или большинство :)\n" +
-            "3. Запустите розыгрыш по команде /pidor\n" +
-            "4. Просмотр статистики канала по команде /pidorstats, /pidormonth\n" +
-            "5. Личная статистика по команде /pidorme\n" +
-            "6. (!!! Только для администраторов чатов): удалить из игры может только Админ канала, сначала выведя по команде список игроков: /pidorlist\n" +
-            "Удалить же игрока можно по команде (используйте идентификатор пользователя - цифры из списка пользователей): /pidorlist del 123456\n\n" +
-            "Важно, розыгрыш проходит только раз в день, повторная команда выведет результат игры.\n\n" +
-            "Сброс розыгрыша происходит каждый день в 12 часов ночи по Москве.";
+            """
+            Правила игры Пидор Дня (только для групповых чатов):
+            1. Зарегистрируйтесь в игру по команде /pidoreg
+            2. Подождите пока зарегиструются все (или большинство :)
+            3. Запустите розыгрыш по команде /pidor
+            4. Просмотр статистики канала по команде /pidorstats, /pidormonth
+            5. Личная статистика по команде /pidorme
+            6. (!!! Только для администраторов чатов): список игроков /pidorlist
+            
+            Важно, розыгрыш проходит только раз в день, повторная команда выведет результат игры.
+            Сброс розыгрыша происходит каждый день в 12 часов ночи по Москве.
+            """;
+
+    private static final String RULES_NEXT =
+            """
+            Правила игры Пидор Дня (только для групповых чатов):
+            1. Зарегистрируйтесь в игру по команде /pidoreg
+            2. Подождите пока зарегиструются все (или большинство :)
+            3. Запустите розыгрыш по команде /pidor
+            4. Просмотр статистики канала по команде /pidorstats, /pidormonth
+            5. Личная статистика по команде /pidorme
+            6. (!!! Только для администраторов чатов): удалить из игры может только Админ канала, сначала выведя по команде список игроков: /pidorlist
+            Удалить же игрока можно по команде (используйте идентификатор пользователя - цифры из списка пользователей): /pidorlist del 123456
+            
+            Важно, розыгрыш проходит только раз в день, повторная команда выведет результат игры.
+            
+            Сброс розыгрыша происходит каждый день в 12 часов ночи по Москве.
+            """;
 
     public TelegramBot(BotConfig botConfig) {
         super(botConfig.getToken());
@@ -107,7 +127,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         //group chat admins: group chat extended
         List<BotCommand> adminCommands = new ArrayList<>(groupCommands);
-        //adminCommands.add(new BotCommand("/pidorlist", "show list of POTD chat players"));
+        adminCommands.add(new BotCommand("/pidorlist", "show list of POTD chat players"));
 
         try {
             this.execute(new SetMyCommands(groupCommands, new BotCommandScopeAllGroupChats(), null));
@@ -129,16 +149,16 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (messageText.contains("@")) {
                 messageText = messageText.substring(0, messageText.indexOf("@"));
             }
-            //pidorlist del idid
             switch (messageText) {
                 case "/pidoreg" -> registerUser(message);
                 case "/pidor" -> startGame(chatId);
                 case "/pidorstats" -> showAllStats(chatId);
-                case "/pidorules" -> sendMessage(chatId, RULES);
+                case "/pidorules" -> sendSilentMessage(chatId, RULES);
                 case "/pidormonth" -> showMonthStats(chatId);
                 case "/pidorme" -> showPlayerStats(chatId, message.getFrom().getId());
-                //case "/pidorlist" ->
-                //default -> sendMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
+                case "/pidorlist" -> showPidorList(chatId);
+//                case "/pidorlist del" -> //pidorlist del idid
+                default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
             }
         }
 
@@ -149,9 +169,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<PotdChallenge> challengeList = getChallengeChatListByPlayer(chatId, userId);
         if (challengeList != null) {
             String msg = String.format("За все время - ты победитель номинации Пидор Дня - %s раз(а).\n", challengeList.size());
-            sendMessage(chatId, msg);
+            sendSilentMessage(chatId, msg);
         } else {
-            sendMessage(chatId, "Статистика по тебе - отсутствует.");
+            sendSilentMessage(chatId, "Статистика по тебе - отсутствует.");
         }
     }
 
@@ -160,9 +180,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<PotdChallenge> challengeList = getChallengeChatMonthList(chatId);
         String month = TimeUtils.getRusMonthName(); //насрано в винительный падеж
         if (challengeList != null) {
-            sendMessage(chatId, getStatsMessage(challengeList, String.format("Топ-10 пидоров за %s:\n", month)));
+            sendSilentMessage(chatId, getStatsMessage(challengeList, String.format("Топ-10 пидоров за %s:\n", month)));
         } else {
-            sendMessage(chatId, String.format("Статистика за %s отсутствует!", month));
+            sendSilentMessage(chatId, String.format("Статистика за %s отсутствует!", month));
         }
     }
 
@@ -172,10 +192,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (chat.isPresent()) {
             List<PotdChallenge> challengeList = getChallengeChatList(chat.get());
             if (challengeList != null) {
-                sendMessage(chatId, getStatsMessage(challengeList, "Топ-10 пидоров за все время:\n"));
+                sendSilentMessage(chatId, getStatsMessage(challengeList, "Топ-10 пидоров за все время:\n"));
             }
         } else {
-            sendMessage(chatId, "Статистика отсутствует, вы еще не сыграли ни одной игры!");
+            sendSilentMessage(chatId, "Статистика отсутствует, вы еще не сыграли ни одной игры!");
+        }
+    }
+
+    //pidorlist
+    private void showPidorList(Long chatId) {
+        Optional<PotdChat> chat = chatRepository.findById(chatId);
+        if (chat.isPresent()) {
+            List<PotdPlayer> list = getChatPlayersList(chat.get());
+            if (list != null && !list.isEmpty()) {
+                sendSilentMessage(chatId, getPlayersList(list));
+            }
+        } else {
+            sendSilentMessage(chatId, "Еще никто не зарегистрирован! undefined");
         }
     }
 
@@ -210,6 +243,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                 .anyMatch(ch -> TimeUtils.checkToday(ch.getChallengeTime()));
     }
 
+    private @Nullable String checkTodayChallengeAndGetFormatTime(PotdChat chat) {
+        for (PotdChallenge challenge : getChallengeChatList(chat)) {
+            Optional<Timestamp> time = TimeUtils.checkAndGetDurationToEndDay(challenge.getChallengeTime());
+            if (time.isPresent()) {
+                return TimeUtils.getFormattedDuration(Duration.between(time.get().toInstant(), TimeUtils.endDayTime().toInstant()));
+            }
+        }
+        return null;
+    }
+
     private String getTodayChallengeWinner(PotdChat chat) {
         PotdChallenge challenge = getChallengeChatList(chat).stream()
                 .filter(ch -> TimeUtils.checkToday(ch.getChallengeTime()))
@@ -238,24 +281,26 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void startGame(Long chatId) {
         Optional<PotdChat> chat = chatRepository.findById(chatId);
         if (chat.isEmpty()) {
-            sendMessage(chatId, "Еще никто не зарегистрирован, просьба проследовать к окошку");
+            sendSilentMessage(chatId, "Еще никто не зарегистрирован, просьба проследовать к окошку");
             return;
         }
         PotdChat resChat = chat.get();
-        if (checkTodayChallenge(resChat)) {
-            sendMessage(chatId, "На сегодня пидор уже найден и это - @" + getTodayChallengeWinner(resChat));
+        String time = checkTodayChallengeAndGetFormatTime(resChat);
+        if (time != null) {
+            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - @%s \uD83D\uDE0E \n Таймаут %s", getTodayChallengeWinner(resChat), time);
+            sendSilentMessage(chatId, str);
             return;
         }
         //Я нашел пидора дня, но похоже, что он вышел из этого чата (вот пидор!), так что попробуйте еще раз!
         List<PotdPlayer> players = getChatPlayersList(resChat);
-//        if (players.isEmpty() || players.size() == 1) {
-//            if (players.isEmpty()) {
-//                sendMessage(chatId, "Поиграть не получится, никто не зарегистрован :frowning_face: ");
-//            } else {
-//                sendMessage(chatId, "Поиграть не получится, один игрок зарегистрирован :frowning_face: ");
-//            }
-//            return;
-//        }
+        if (players.isEmpty() || players.size() == 1) {
+            if (players.isEmpty()) {
+                sendSilentMessage(chatId, "Поиграть не получится, никто не зарегистрован :frowning_face: ");
+            } else {
+                sendSilentMessage(chatId, "Поиграть не получится, только один игрок зарегистрирован :frowning_face: ");
+            }
+            return;
+        }
         Random random = new Random();
         int num = random.nextInt(0, players.size());
 
@@ -270,30 +315,31 @@ public class TelegramBot extends TelegramLongPollingBot {
             challenge.setChallengeTime(TimeUtils.now());
             challengeRepository.save(challenge);
 
-            emulateChatActivity(chatId, player.get().getUser().getUserName());
+            challengeActivity(chatId, player.get().getUser().getUserName());
             //sendMessage(chatId, ":banana: Победитель по жизни: @" + player.get().getUser().getUserName());
             return;
         }
-        sendMessage(chatId, "Что то пошло не так! :frowning_face:");
+        sendSilentMessage(chatId, "Что то пошло не так! :frowning_face:");
     }
 
-    private void emulateChatActivity(Long chatId, String userName) {
+    private void challengeActivity(Long chatId, String userName) {
         String first = phraseUtils.getRandomStartLine(chatId);
         String second = phraseUtils.getRandomStartLine(chatId);
         String third = phraseUtils.getRandomLastLine(chatId);
 
-        sendMessage(chatId, first);
-        scheduleChatMessage(chatId, second, 3);
-        scheduleChatMessage(chatId, third + userName, 6);
+        sendSilentMessage(chatId, first);
+        scheduleChatMessage(chatId, second, 3, true);
+        scheduleChatMessage(chatId, third + userName, 6, false);
     }
 
-    private void scheduleChatMessage(Long chatId, String message, int secInterval) {
+    private void scheduleChatMessage(Long chatId, String message, int secInterval, boolean isSilent) {
         String name = UUID.randomUUID().toString();
         //заполняем джобу
         JobDataMap jobDataMap = new JobDataMap();
         jobDataMap.put("telegramBot", this);
         jobDataMap.put("chatId", chatId);
         jobDataMap.put("message", message);
+        jobDataMap.put("isSilent", isSilent);
 
         JobDetail job = JobBuilder.newJob(SimpleMessageJob.class)
                 .withIdentity(name, "OnceMessageJob")
@@ -325,10 +371,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             potdPlayer.setStatus(true);
             playerRepository.save(potdPlayer);
 
-            sendMessage(chatId, ":wheelchair: Ты теперь участвуешь в игре \"Пидор Дня\" :wheelchair:");
+            sendSilentMessage(chatId, ":wheelchair: Ты теперь участвуешь в игре \"Пидор Дня\" :wheelchair:");
             log.info("New POTD game player added: " + potdPlayer);
         } else {
-            sendMessage(chatId, "Эй, ты уже в игре! :crossed_swords:");
+            sendSilentMessage(chatId, "Эй, ты уже в игре! :crossed_swords: \nДважды в одну и туже реку, хех \uD83E\uDD1C \uD83D\uDC4C");
         }
     }
 
@@ -404,12 +450,37 @@ public class TelegramBot extends TelegramLongPollingBot {
         return stringBuilder.toString();
     }
 
+    private String getPlayersList(List<PotdPlayer> list) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Участники из чата: ").append("\n");
+        for (PotdPlayer p : list) {
+            String format = String.format("@%s", p.getUser().getUserName());
+            stringBuilder.append(format).append(", ");
+        }
+        String str = stringBuilder.toString();
+        str = str.substring(0, str.length() - 2);
+        return str;
+    }
+
 
     /* with smiles https://github-emoji-picker.vercel.app/  https://gist.github.com/ricealexander/ae8b8cddc3939d6ba212f953701f53e6 */
     public void sendMessage(long chatId, String textToSend) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(EmojiParser.parseToUnicode(textToSend));
+
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error("Error occurred: " + e.getMessage());
+        }
+    }
+
+    public void sendSilentMessage(long chatId, String textToSend) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(EmojiParser.parseToUnicode(textToSend));
+        sendMessage.disableNotification();
 
         try {
             execute(sendMessage);
