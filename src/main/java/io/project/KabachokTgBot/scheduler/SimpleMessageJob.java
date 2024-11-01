@@ -1,6 +1,6 @@
 package io.project.KabachokTgBot.scheduler;
 
-import io.project.KabachokTgBot.service.TelegramBot;
+import io.project.KabachokTgBot.service.telegramBot.TelegramBotService;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -13,15 +13,15 @@ public class SimpleMessageJob implements Job {
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         JobDataMap dataMap = context.getMergedJobDataMap();
-        TelegramBot telegramBot = (TelegramBot) dataMap.get("telegramBot");
+        TelegramBotService telegramBotService = (TelegramBotService) dataMap.get("telegramBot");
         long chatId = dataMap.getLong("chatId");
         String message = dataMap.getString("message");
         boolean isSilent = dataMap.getBoolean("isSilent");
 
         if (isSilent) {
-            telegramBot.sendSilentMessage(chatId, message);
+            telegramBotService.sendSilentMessage(chatId, message);
         } else {
-            telegramBot.sendMessage(chatId, message);
+            telegramBotService.sendMessage(chatId, message);
         }
     }
 }

@@ -1,4 +1,4 @@
-package io.project.KabachokTgBot.service;
+package io.project.KabachokTgBot.service.telegramBot;
 
 import com.vdurmont.emoji.EmojiParser;
 import io.project.KabachokTgBot.config.BotConfig;
@@ -50,9 +50,18 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.ALL_STATS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAYER_LIST;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAYER_STATS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAY_GAME;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.REGISTRATION;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.RULES;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.TEXT_RULES;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.THIS_MONTH_STATS;
+
 @Slf4j
 @Service
-public class TelegramBot extends TelegramLongPollingBot {
+public class TelegramBotService extends TelegramLongPollingBot {
 
     @Autowired
     private PotdTelegramUserRepository telegramUserRepository;
@@ -69,40 +78,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig config;
     private final PhraseUtils phraseUtils;
     private final SystemScheduler scheduler;
+    private final String botName;
 
-    private static final String RULES =
-            """
-            Правила игры Пидор Дня (только для групповых чатов):
-            1. Зарегистрируйтесь в игру по команде /pidoreg
-            2. Подождите пока зарегиструются все (или большинство :)
-            3. Запустите розыгрыш по команде /pidor
-            4. Просмотр статистики канала по команде /pidorstats, /pidormonth
-            5. Личная статистика по команде /pidorme
-            6. (!!! Только для администраторов чатов): список игроков /pidorlist
-            
-            Важно, розыгрыш проходит только раз в день, повторная команда выведет результат игры.
-            Сброс розыгрыша происходит каждый день в 12 часов ночи по Москве.
-            """;
-
-    private static final String RULES_NEXT =
-            """
-            Правила игры Пидор Дня (только для групповых чатов):
-            1. Зарегистрируйтесь в игру по команде /pidoreg
-            2. Подождите пока зарегиструются все (или большинство :)
-            3. Запустите розыгрыш по команде /pidor
-            4. Просмотр статистики канала по команде /pidorstats, /pidormonth
-            5. Личная статистика по команде /pidorme
-            6. (!!! Только для администраторов чатов): удалить из игры может только Админ канала, сначала выведя по команде список игроков: /pidorlist
-            Удалить же игрока можно по команде (используйте идентификатор пользователя - цифры из списка пользователей): /pidorlist del 123456
-            
-            Важно, розыгрыш проходит только раз в день, повторная команда выведет результат игры.
-            
-            Сброс розыгрыша происходит каждый день в 12 часов ночи по Москве.
-            """;
-
-    public TelegramBot(BotConfig botConfig) {
+    public TelegramBotService(BotConfig botConfig) {
         super(botConfig.getToken());
         this.config = botConfig;
+        this.botName = botConfig.getBotName();
         this.phraseUtils = new PhraseUtils();
 
         this.scheduler = new SystemScheduler();
@@ -114,20 +95,20 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void setupBotCommands() {
         //group chats
         List<BotCommand> groupCommands = new ArrayList<>();
-        groupCommands.add(new BotCommand("/pidoreg", "register for POTD game"));
-        groupCommands.add(new BotCommand("/pidor", "play the game, see /pidorules first"));
-        groupCommands.add(new BotCommand("/pidorstats", "POTD game stats for all time"));
-        groupCommands.add(new BotCommand("/pidorules", "POTD game rules"));
-        groupCommands.add(new BotCommand("/pidormonth", "POTD game stats for this month"));
-        groupCommands.add(new BotCommand("/pidorme", "POTD game personal stats"));
+        groupCommands.add(new BotCommand(REGISTRATION, "register for POTD game"));
+        groupCommands.add(new BotCommand(PLAY_GAME, "play the game, see /pidorules first"));
+        groupCommands.add(new BotCommand(ALL_STATS, "POTD game stats for all time"));
+        groupCommands.add(new BotCommand(RULES, "POTD game rules"));
+        groupCommands.add(new BotCommand(THIS_MONTH_STATS, "POTD game stats for this month"));
+        groupCommands.add(new BotCommand(PLAYER_STATS, "POTD game personal stats"));
 
         //private chats
         List<BotCommand> privateCommands = new ArrayList<>();
-        privateCommands.add(new BotCommand("/pidorules", "POTD game rules"));
+        privateCommands.add(new BotCommand(RULES, "POTD game rules"));
 
         //group chat admins: group chat extended
         List<BotCommand> adminCommands = new ArrayList<>(groupCommands);
-        adminCommands.add(new BotCommand("/pidorlist", "show list of POTD chat players"));
+        adminCommands.add(new BotCommand(PLAYER_LIST, "show list of POTD chat players"));
 
         try {
             this.execute(new SetMyCommands(groupCommands, new BotCommandScopeAllGroupChats(), null));
@@ -140,28 +121,29 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if(update.hasMessage() && update.getMessage().hasText()) {
+        if (update.hasMessage() && update.getMessage().hasText()) {
             Message message = update.getMessage();
             String messageText = message.getText();
             long chatId = message.getChatId();
-            log.info("ChatMessageToBot: chatId={}, msg={}", chatId, messageText);
-            // /pidoreg@testingrandom777_bot , /pidoreg
-            if (messageText.contains("@")) {
+            if (messageText.startsWith("/") && messageText.contains("@" + botName)) {
+                log.info("ChatMessageToBot: chatId={}, msg={}", chatId, messageText);
                 messageText = messageText.substring(0, messageText.indexOf("@"));
+                switch (messageText) {
+                    case REGISTRATION -> registerUser(message);
+                    case PLAY_GAME -> startGame(chatId);
+                    case ALL_STATS -> showAllStats(chatId);
+                    case RULES -> sendSilentMessage(chatId, TEXT_RULES);
+                    case THIS_MONTH_STATS -> showMonthStats(chatId);
+                    case PLAYER_STATS -> showPlayerStats(chatId, message.getFrom().getId());
+                    case PLAYER_LIST -> showPidorList(chatId);
+    //                case "/pidorlist del" -> //pidorlist del idid
+                    //default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
+                }
             }
-            switch (messageText) {
-                case "/pidoreg" -> registerUser(message);
-                case "/pidor" -> startGame(chatId);
-                case "/pidorstats" -> showAllStats(chatId);
-                case "/pidorules" -> sendSilentMessage(chatId, RULES);
-                case "/pidormonth" -> showMonthStats(chatId);
-                case "/pidorme" -> showPlayerStats(chatId, message.getFrom().getId());
-                case "/pidorlist" -> showPidorList(chatId);
-//                case "/pidorlist del" -> //pidorlist del idid
-                default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
-            }
+//            if (messageText.toLowerCase(Locale.ROOT).contains("пидор")) {
+//
+//            }
         }
-
     }
 
     //pidorme
@@ -287,7 +269,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         PotdChat resChat = chat.get();
         String time = checkTodayChallengeAndGetFormatTime(resChat);
         if (time != null) {
-            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - @%s \uD83D\uDE0E \n Таймаут %s", getTodayChallengeWinner(resChat), time);
+            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - %s \uD83D\uDE0E \n Таймаут %s", getTodayChallengeWinner(resChat), time);
             sendSilentMessage(chatId, str);
             return;
         }
@@ -440,7 +422,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (index == 11) {
                 break;
             }
-            String text = String.format("%d. @%s - %d раз(а)\n", index, entry.getKey().getUser().getUserName(), entry.getValue());
+            String text = String.format("%d. %s - %d раз(а)\n", index, entry.getKey().getUser().getUserName(), entry.getValue());
             stringBuilder.append(text);
             index++;
         }
@@ -454,8 +436,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Участники из чата: ").append("\n");
         for (PotdPlayer p : list) {
-            String format = String.format("@%s", p.getUser().getUserName());
-            stringBuilder.append(format).append(", ");
+            stringBuilder.append(p.getUser().getUserName()).append(", ");
         }
         String str = stringBuilder.toString();
         str = str.substring(0, str.length() - 2);
@@ -489,20 +470,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    public BotConfig getConfig() {
-        return config;
-    }
-
-
     @Override
     public String getBotUsername() {
-        return config.getBotName();
-    }
-
-    @Deprecated
-    @Override
-    public String getBotToken() {
-        return config.getToken();
+        return botName;
     }
 }
 
