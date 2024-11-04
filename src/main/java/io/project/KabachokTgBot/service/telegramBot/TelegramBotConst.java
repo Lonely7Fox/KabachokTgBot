@@ -1,6 +1,9 @@
 package io.project.KabachokTgBot.service.telegramBot;
 
-public class TelegramConst {
+import java.util.ArrayList;
+import java.util.List;
+
+public class TelegramBotConst {
 
     public static final String REGISTRATION = "/pidoreg";
     public static final String PLAY_GAME = "/pidor";
@@ -9,6 +12,18 @@ public class TelegramConst {
     public static final String PLAYER_STATS = "/pidorme";
     public static final String RULES = "/pidorules";
     public static final String PLAYER_LIST = "/pidorlist";
+
+    public static List<String> getCommands() {
+        List<String> myCommands = new ArrayList<>();
+        myCommands.add(REGISTRATION);
+        myCommands.add(PLAY_GAME);
+        myCommands.add(ALL_STATS);
+        myCommands.add(RULES);
+        myCommands.add(THIS_MONTH_STATS);
+        myCommands.add(PLAYER_STATS);
+        myCommands.add(PLAYER_LIST);
+        return myCommands;
+    }
     
     public static final String TEXT_RULES =
             """

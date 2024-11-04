@@ -18,8 +18,6 @@ public class PhraseUtils {
     private final LastUsedPhraseCache lastUsedPhraseCache;
 
     public PhraseUtils() {
-//        File startFile = new File("phrases/StartPhrase.txt");
-//        File lastFile = new File("phrases/LastPhrase.txt");
         try {
             this.startLines = resolveFile(new ClassPathResource("phrases/StartPhrase.txt").getInputStream());
             this.lastLines = resolveFile(new ClassPathResource("phrases/LastPhrase.txt").getInputStream());

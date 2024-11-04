@@ -28,10 +28,7 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.postgresql/postgresql
 	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.3'
 
-	// https://mvnrepository.com/artifact/org.telegram/telegrambots
-	implementation ('org.telegram:telegrambots:6.9.7.1') {
-		exclude group: 'com.fasterxml.jackson.module', module: 'jackson-module-jaxb-annotations'
-	}
+	implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
 
 	// https://mvnrepository.com/artifact/com.vdurmont/emoji-java
 	implementation 'com.vdurmont:emoji-java:5.1.1'

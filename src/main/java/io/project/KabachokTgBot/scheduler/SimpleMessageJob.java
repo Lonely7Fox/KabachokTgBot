@@ -19,9 +19,9 @@ public class SimpleMessageJob implements Job {
         boolean isSilent = dataMap.getBoolean("isSilent");
 
         if (isSilent) {
-            telegramBotService.sendSilentMessage(chatId, message);
+            telegramBotService.sendMessage(chatId, message, true);
         } else {
-            telegramBotService.sendMessage(chatId, message);
+            telegramBotService.sendMessage(chatId, message, false);
         }
     }
 }

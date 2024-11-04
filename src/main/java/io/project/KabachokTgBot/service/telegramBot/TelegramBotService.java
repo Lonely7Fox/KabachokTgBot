@@ -1,5 +1,11 @@
 package io.project.KabachokTgBot.service.telegramBot;
 
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.model.Chat;
+import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.User;
+import com.pengrad.telegrambot.request.BaseRequest;
+import com.pengrad.telegrambot.request.SendMessage;
 import com.vdurmont.emoji.EmojiParser;
 import io.project.KabachokTgBot.config.BotConfig;
 import io.project.KabachokTgBot.model.potd.challenge.PotdChallenge;
@@ -12,6 +18,7 @@ import io.project.KabachokTgBot.model.potd.telegramUser.PotdTelegramUser;
 import io.project.KabachokTgBot.model.potd.telegramUser.PotdTelegramUserRepository;
 import io.project.KabachokTgBot.scheduler.SimpleMessageJob;
 import io.project.KabachokTgBot.scheduler.SystemScheduler;
+import io.project.KabachokTgBot.service.telegramBot.listeners.CommandListener;
 import io.project.KabachokTgBot.utils.phrase.PhraseUtils;
 import io.project.KabachokTgBot.utils.TimeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -24,18 +31,6 @@ import org.quartz.TriggerBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Chat;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.User;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeAllChatAdministrators;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeAllGroupChats;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeAllPrivateChats;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -50,18 +45,9 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.ALL_STATS;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAYER_LIST;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAYER_STATS;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.PLAY_GAME;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.REGISTRATION;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.RULES;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.TEXT_RULES;
-import static io.project.KabachokTgBot.service.telegramBot.TelegramConst.THIS_MONTH_STATS;
-
 @Slf4j
 @Service
-public class TelegramBotService extends TelegramLongPollingBot {
+public class TelegramBotService {
 
     @Autowired
     private PotdTelegramUserRepository telegramUserRepository;
@@ -75,122 +61,73 @@ public class TelegramBotService extends TelegramLongPollingBot {
     @Autowired
     private PotdChallengeRepository challengeRepository;
 
-    private final BotConfig config;
+    private final TelegramBot telegramBot;
     private final PhraseUtils phraseUtils;
     private final SystemScheduler scheduler;
     private final String botName;
 
     public TelegramBotService(BotConfig botConfig) {
-        super(botConfig.getToken());
-        this.config = botConfig;
+        this.telegramBot = new TelegramBot(botConfig.getToken());
         this.botName = botConfig.getBotName();
         this.phraseUtils = new PhraseUtils();
-
         this.scheduler = new SystemScheduler();
+
+        init();
+    }
+
+    private void init() {
         scheduler.start();
 
-        setupBotCommands();
-    }
-
-    private void setupBotCommands() {
-        //group chats
-        List<BotCommand> groupCommands = new ArrayList<>();
-        groupCommands.add(new BotCommand(REGISTRATION, "register for POTD game"));
-        groupCommands.add(new BotCommand(PLAY_GAME, "play the game, see /pidorules first"));
-        groupCommands.add(new BotCommand(ALL_STATS, "POTD game stats for all time"));
-        groupCommands.add(new BotCommand(RULES, "POTD game rules"));
-        groupCommands.add(new BotCommand(THIS_MONTH_STATS, "POTD game stats for this month"));
-        groupCommands.add(new BotCommand(PLAYER_STATS, "POTD game personal stats"));
-
-        //private chats
-        List<BotCommand> privateCommands = new ArrayList<>();
-        privateCommands.add(new BotCommand(RULES, "POTD game rules"));
-
-        //group chat admins: group chat extended
-        List<BotCommand> adminCommands = new ArrayList<>(groupCommands);
-        adminCommands.add(new BotCommand(PLAYER_LIST, "show list of POTD chat players"));
-
-        try {
-            this.execute(new SetMyCommands(groupCommands, new BotCommandScopeAllGroupChats(), null));
-            this.execute(new SetMyCommands(privateCommands, new BotCommandScopeAllPrivateChats(), null));
-            this.execute(new SetMyCommands(adminCommands, new BotCommandScopeAllChatAdministrators(), null));
-        } catch (TelegramApiException e) {
-            log.error("Error setting bot's command list: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            Message message = update.getMessage();
-            String messageText = message.getText();
-            long chatId = message.getChatId();
-            if (messageText.startsWith("/") && messageText.contains("@" + botName)) {
-                log.info("ChatMessageToBot: chatId={}, msg={}", chatId, messageText);
-                messageText = messageText.substring(0, messageText.indexOf("@"));
-                switch (messageText) {
-                    case REGISTRATION -> registerUser(message);
-                    case PLAY_GAME -> startGame(chatId);
-                    case ALL_STATS -> showAllStats(chatId);
-                    case RULES -> sendSilentMessage(chatId, TEXT_RULES);
-                    case THIS_MONTH_STATS -> showMonthStats(chatId);
-                    case PLAYER_STATS -> showPlayerStats(chatId, message.getFrom().getId());
-                    case PLAYER_LIST -> showPidorList(chatId);
-    //                case "/pidorlist del" -> //pidorlist del idid
-                    //default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
-                }
-            }
-//            if (messageText.toLowerCase(Locale.ROOT).contains("пидор")) {
-//
-//            }
-        }
+        TelegramBotCommands.getCommands().forEach(this::execute);
+        CommandListener commandListener = new CommandListener(this);
+        this.telegramBot.setUpdatesListener(commandListener);
     }
 
     //pidorme
-    private void showPlayerStats(Long chatId, Long userId) {
+    public void showPlayerStats(Long chatId, Long userId) {
         List<PotdChallenge> challengeList = getChallengeChatListByPlayer(chatId, userId);
         if (challengeList != null) {
             String msg = String.format("За все время - ты победитель номинации Пидор Дня - %s раз(а).\n", challengeList.size());
-            sendSilentMessage(chatId, msg);
+            sendMessage(chatId, msg, true);
         } else {
-            sendSilentMessage(chatId, "Статистика по тебе - отсутствует.");
+            sendMessage(chatId, "Статистика по тебе - отсутствует.", true);
         }
     }
 
     //pidormonth
-    private void showMonthStats(long chatId) {
+    public void showMonthStats(long chatId) {
         List<PotdChallenge> challengeList = getChallengeChatMonthList(chatId);
         String month = TimeUtils.getRusMonthName(); //насрано в винительный падеж
         if (challengeList != null) {
-            sendSilentMessage(chatId, getStatsMessage(challengeList, String.format("Топ-10 пидоров за %s:\n", month)));
+            sendMessage(chatId, getStatsMessage(challengeList, String.format("Топ-10 пидоров за %s:\n", month)), true);
         } else {
-            sendSilentMessage(chatId, String.format("Статистика за %s отсутствует!", month));
+            sendMessage(chatId, String.format("Статистика за %s отсутствует!", month), true);
         }
     }
 
     //pidorstats
-    private void showAllStats(Long chatId) {
+    public void showAllStats(Long chatId) {
         Optional<PotdChat> chat = chatRepository.findById(chatId);
         if (chat.isPresent()) {
             List<PotdChallenge> challengeList = getChallengeChatList(chat.get());
             if (challengeList != null) {
-                sendSilentMessage(chatId, getStatsMessage(challengeList, "Топ-10 пидоров за все время:\n"));
+                sendMessage(chatId, getStatsMessage(challengeList, "Топ-10 пидоров за все время:\n"), true);
             }
         } else {
-            sendSilentMessage(chatId, "Статистика отсутствует, вы еще не сыграли ни одной игры!");
+            sendMessage(chatId, "Статистика отсутствует, вы еще не сыграли ни одной игры!", true);
         }
     }
 
     //pidorlist
-    private void showPidorList(Long chatId) {
+    public void showPidorList(Long chatId) {
         Optional<PotdChat> chat = chatRepository.findById(chatId);
         if (chat.isPresent()) {
             List<PotdPlayer> list = getChatPlayersList(chat.get());
             if (list != null && !list.isEmpty()) {
-                sendSilentMessage(chatId, getPlayersList(list));
+                sendMessage(chatId, getPlayersList(list), true);
             }
         } else {
-            sendSilentMessage(chatId, "Еще никто не зарегистрирован! undefined");
+            sendMessage(chatId, "Еще никто не зарегистрирован! undefined", true);
         }
     }
 
@@ -260,26 +197,26 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     //pidor
-    private void startGame(Long chatId) {
+    public void startGame(Long chatId) {
         Optional<PotdChat> chat = chatRepository.findById(chatId);
         if (chat.isEmpty()) {
-            sendSilentMessage(chatId, "Еще никто не зарегистрирован, просьба проследовать к окошку");
+            sendMessage(chatId, "Еще никто не зарегистрирован, просьба проследовать к окошку", true);
             return;
         }
         PotdChat resChat = chat.get();
         String time = checkTodayChallengeAndGetFormatTime(resChat);
         if (time != null) {
             String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - %s \uD83D\uDE0E \n Таймаут %s", getTodayChallengeWinner(resChat), time);
-            sendSilentMessage(chatId, str);
+            sendMessage(chatId, str, true);
             return;
         }
         //Я нашел пидора дня, но похоже, что он вышел из этого чата (вот пидор!), так что попробуйте еще раз!
         List<PotdPlayer> players = getChatPlayersList(resChat);
         if (players.isEmpty() || players.size() == 1) {
             if (players.isEmpty()) {
-                sendSilentMessage(chatId, "Поиграть не получится, никто не зарегистрован :frowning_face: ");
+                sendMessage(chatId, "Поиграть не получится, никто не зарегистрован :frowning_face: ", true);
             } else {
-                sendSilentMessage(chatId, "Поиграть не получится, только один игрок зарегистрирован :frowning_face: ");
+                sendMessage(chatId, "Поиграть не получится, только один игрок зарегистрирован :frowning_face: ", true);
             }
             return;
         }
@@ -301,7 +238,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
             //sendMessage(chatId, ":banana: Победитель по жизни: @" + player.get().getUser().getUserName());
             return;
         }
-        sendSilentMessage(chatId, "Что то пошло не так! :frowning_face:");
+        sendMessage(chatId, "Что то пошло не так! :frowning_face:", true);
     }
 
     private void challengeActivity(Long chatId, String userName) {
@@ -309,7 +246,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
         String second = phraseUtils.getRandomStartLine(chatId);
         String third = phraseUtils.getRandomLastLine(chatId);
 
-        sendSilentMessage(chatId, first);
+        sendMessage(chatId, first, true);
         scheduleChatMessage(chatId, second, 3, true);
         scheduleChatMessage(chatId, third + userName, 6, false);
     }
@@ -338,10 +275,10 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     //pidoreg
-    private void registerUser(Message msg) {
-        Long chatId = msg.getChatId();
-        Chat chat = msg.getChat();
-        User user = msg.getFrom();
+    public void registerUser(Message msg) {
+        Chat chat = msg.chat();
+        Long chatId = chat.id();
+        User user = msg.from();
         //player and chat reg
         PotdTelegramUser regUser = addOrGetUser(user);
         PotdChat regChat = addOrGetChat(chat);
@@ -353,21 +290,21 @@ public class TelegramBotService extends TelegramLongPollingBot {
             potdPlayer.setStatus(true);
             playerRepository.save(potdPlayer);
 
-            sendSilentMessage(chatId, ":wheelchair: Ты теперь участвуешь в игре \"Пидор Дня\" :wheelchair:");
+            sendMessage(chatId, ":wheelchair: Ты теперь участвуешь в игре \"Пидор Дня\" :wheelchair:", true);
             log.info("New POTD game player added: " + potdPlayer);
         } else {
-            sendSilentMessage(chatId, "Эй, ты уже в игре! :crossed_swords: \nДважды в одну и туже реку, хех \uD83E\uDD1C \uD83D\uDC4C");
+            sendMessage(chatId, "Эй, ты уже в игре! :crossed_swords: \nДважды в одну и туже реку, хех \uD83E\uDD1C \uD83D\uDC4C", true);
         }
     }
 
     private PotdTelegramUser addOrGetUser(User user) {
-        Long userId = user.getId();
+        Long userId = user.id();
         Optional<PotdTelegramUser> tempUser = telegramUserRepository.findById(userId);
         if (tempUser.isEmpty()) {
             PotdTelegramUser player = new PotdTelegramUser();
             player.setId(userId);
-            player.setName(user.getFirstName());
-            player.setUserName(user.getUserName());
+            player.setName(user.firstName());
+            player.setUserName(user.username());
             player.setRegistredAt(TimeUtils.now());
             return telegramUserRepository.save(player);
         } else {
@@ -376,12 +313,12 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private PotdChat addOrGetChat(Chat chat) {
-        Long chatId = chat.getId();
+        Long chatId = chat.id();
         Optional<PotdChat> tempChat = chatRepository.findById(chatId);
         if (tempChat.isEmpty()) {
             PotdChat chatik = new PotdChat();
             chatik.setId(chatId);
-            chatik.setName(chat.getTitle());
+            chatik.setName(chat.title());
             chatik.setRegisteredAt(TimeUtils.now());
             return chatRepository.save(chatik);
         } else {
@@ -445,32 +382,20 @@ public class TelegramBotService extends TelegramLongPollingBot {
 
 
     /* with smiles https://github-emoji-picker.vercel.app/  https://gist.github.com/ricealexander/ae8b8cddc3939d6ba212f953701f53e6 */
-    public void sendMessage(long chatId, String textToSend) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(EmojiParser.parseToUnicode(textToSend));
+    public void sendMessage(long chatId, String textToSend, boolean disableNotification) {
+        SendMessage sendMessage = new SendMessage(chatId, EmojiParser.parseToUnicode(textToSend));
+        sendMessage.disableNotification(true);
+        execute(sendMessage);
+    }
 
+    public void execute(BaseRequest request) {
         try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            log.error("Error occurred: " + e.getMessage());
+            telegramBot.execute(request);
+        } catch (Exception e) {
+            log.error("Error setting bot's command list: " + e.getMessage());
         }
     }
 
-    public void sendSilentMessage(long chatId, String textToSend) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(EmojiParser.parseToUnicode(textToSend));
-        sendMessage.disableNotification();
-
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            log.error("Error occurred: " + e.getMessage());
-        }
-    }
-
-    @Override
     public String getBotUsername() {
         return botName;
     }
