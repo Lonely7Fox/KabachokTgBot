@@ -31,17 +31,14 @@ public class TelegramBotCommands {
         //group chats
         SetMyCommands groupCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats);
         groupCommands.scope(new BotCommandScopeAllGroupChats());
-        groupCommands.languageCode(null);
 
         //private chats
         SetMyCommands privateCommands = new SetMyCommands(rules);
         groupCommands.scope(new BotCommandScopeAllPrivateChats());
-        groupCommands.languageCode(null);
 
         //group chat admins: group chat extended
         SetMyCommands adminCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats, playerList);
         groupCommands.scope(new BotCommandScopeAllChatAdministrators());
-        groupCommands.languageCode(null);
 
         List<SetMyCommands> myCommands = new ArrayList<>();
         myCommands.add(groupCommands);

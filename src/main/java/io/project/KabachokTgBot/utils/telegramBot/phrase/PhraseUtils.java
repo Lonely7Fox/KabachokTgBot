@@ -1,4 +1,4 @@
-package io.project.KabachokTgBot.utils.phrase;
+package io.project.KabachokTgBot.utils.telegramBot.phrase;
 
 import java.io.BufferedReader;
 import java.io.IOException;

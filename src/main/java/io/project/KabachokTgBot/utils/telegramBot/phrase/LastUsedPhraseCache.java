@@ -1,4 +1,4 @@
-package io.project.KabachokTgBot.utils.phrase;
+package io.project.KabachokTgBot.utils.telegramBot.phrase;
 
 import java.util.concurrent.ConcurrentHashMap;
 
