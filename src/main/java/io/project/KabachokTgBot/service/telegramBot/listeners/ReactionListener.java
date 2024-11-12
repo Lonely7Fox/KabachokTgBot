@@ -36,7 +36,7 @@ public class ReactionListener implements TelegramUpdateListener {
         ArrayList<String> sofaConst = new ArrayList<>(List.of("диван", "кроват"));
         ArrayList<String> rollingConst = new ArrayList<>(List.of("подкру"));
         ArrayList<String> snowConst = new ArrayList<>(List.of("зима", "снег", "новый год", "новым годом"));
-        ArrayList<String> dateConst = new ArrayList<>(List.of("праздник", "др", "рождения", "рожденья"));
+        ArrayList<String> dateConst = new ArrayList<>(List.of("праздник", "рождения", "рожденья"));
 
         HashMap<ArrayList<String>, ReactionTypeEmoji> emojiMap = new HashMap<>();
         emojiMap.put(gayConst, new ReactionTypeEmoji("🫡")); //SALUTING FACE (https://fileformat.info/info/unicode/char/1FAE1)
