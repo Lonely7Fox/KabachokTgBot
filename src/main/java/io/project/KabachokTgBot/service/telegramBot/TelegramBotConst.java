@@ -12,6 +12,8 @@ public class TelegramBotConst {
     public static final String PLAYER_STATS = "/pidorme";
     public static final String RULES = "/pidorules";
     public static final String PLAYER_LIST = "/pidorlist";
+    public static final String TODAY_HOLIDAYS = "/todayholidays";
+    public static final String WEEKEND = "/weekend";
 
     public static List<String> getCommands() {
         List<String> myCommands = new ArrayList<>();
@@ -22,6 +24,8 @@ public class TelegramBotConst {
         myCommands.add(THIS_MONTH_STATS);
         myCommands.add(PLAYER_STATS);
         myCommands.add(PLAYER_LIST);
+        myCommands.add(TODAY_HOLIDAYS);
+        myCommands.add(WEEKEND);
         return myCommands;
     }
     

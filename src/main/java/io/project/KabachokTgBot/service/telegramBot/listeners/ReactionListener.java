@@ -26,7 +26,7 @@ public class ReactionListener implements TelegramUpdateListener {
     }
 
     private HashMap<ArrayList<String>, ReactionTypeEmoji> fillEmojiMap() {
-        ArrayList<String> gayConst = new ArrayList<>(List.of("пидор", "пидр"));
+        ArrayList<String> gayConst = new ArrayList<>(List.of("пидор", "пидр", "пидар"));
         ArrayList<String> squashConst = new ArrayList<>(List.of("кабачок", "кабачк"));
         ArrayList<String> poopConst = new ArrayList<>(List.of("говно", "срат", "срал", "серил", "кака", "срань"));
         ArrayList<String> planeConst = new ArrayList<>(List.of("беспилотник", "самолет", "самолёт"));

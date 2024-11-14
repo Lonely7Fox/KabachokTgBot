@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.Optional;
 
 public class TimeUtils {
@@ -23,8 +24,12 @@ public class TimeUtils {
         return Timestamp.from(Instant.now(clock));
     }
 
-    public static LocalDate today() {
+    public static LocalDate todayLocalDate() {
         return LocalDate.now(zoneId);
+    }
+
+    public static Date todayDate() {
+        return Date.from(startDayTime().toInstant());
     }
 
     public static boolean checkToday(Timestamp timestamp) {
@@ -49,7 +54,7 @@ public class TimeUtils {
     }
 
     public static boolean checkThisMonth(Timestamp timestamp) {
-        LocalDate start = today().withDayOfMonth(1);
+        LocalDate start = todayLocalDate().withDayOfMonth(1);
         LocalDate end = start.plusMonths(1);
 
         Timestamp timeStart = Timestamp.from(start.atStartOfDay(zoneId).toLocalDateTime().toInstant(zoneOffset));
@@ -59,7 +64,7 @@ public class TimeUtils {
     }
 
     public static String getRusMonthName() {
-        Month month = today().getMonth();
+        Month month = todayLocalDate().getMonth();
         String[] months = new String[] {"null", "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                 "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"};
         //return month.getDisplayName(TextStyle.FULL, new Locale("ru"));
@@ -67,17 +72,16 @@ public class TimeUtils {
     }
 
     public static Timestamp startDayTime() {
-        LocalDate today = today();
+        LocalDate today = todayLocalDate();
         LocalDateTime startOfDay = today.atStartOfDay(zoneId).toLocalDateTime();
         Instant startOfDayTimestamp = startOfDay.toInstant(zoneOffset);
         return Timestamp.from(startOfDayTimestamp);
     }
 
     public static Timestamp endDayTime() {
-        LocalDateTime endOfDay = today().atTime(23, 59, 59);
+        LocalDateTime endOfDay = todayLocalDate().atTime(23, 59, 59);
         Instant endOfDayTimestamp = endOfDay.toInstant(zoneOffset);
         return Timestamp.from(endOfDayTimestamp);
     }
-
 
 }

@@ -16,6 +16,8 @@ import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.PLAY
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.REGISTRATION;
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.RULES;
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.THIS_MONTH_STATS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.TODAY_HOLIDAYS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.WEEKEND;
 
 public class TelegramBotCommands {
 
@@ -27,13 +29,15 @@ public class TelegramBotCommands {
         BotCommand thisMonthStats = new BotCommand(THIS_MONTH_STATS, "POTD game stats for this month");
         BotCommand playerStats = new BotCommand(PLAYER_STATS, "POTD game personal stats");
         BotCommand playerList = new BotCommand(PLAYER_LIST, "show list of POTD chat players");
+        BotCommand todayHolidays = new BotCommand(TODAY_HOLIDAYS, "list today holidays");
+        BotCommand weekend = new BotCommand(WEEKEND, "days to weekend");
 
         //group chats
-        SetMyCommands groupCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats);
+        SetMyCommands groupCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats, todayHolidays, weekend);
         groupCommands.scope(new BotCommandScopeAllGroupChats());
 
         //private chats
-        SetMyCommands privateCommands = new SetMyCommands(rules);
+        SetMyCommands privateCommands = new SetMyCommands(rules, todayHolidays, weekend);
         groupCommands.scope(new BotCommandScopeAllPrivateChats());
 
         //group chat admins: group chat extended

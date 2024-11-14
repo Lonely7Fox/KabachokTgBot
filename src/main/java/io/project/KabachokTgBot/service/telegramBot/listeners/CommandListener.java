@@ -2,7 +2,9 @@ package io.project.KabachokTgBot.service.telegramBot.listeners;
 
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
+import io.project.KabachokTgBot.service.isdayoff.IsDayOffService;
 import io.project.KabachokTgBot.service.telegramBot.TelegramBotService;
+import io.project.KabachokTgBot.service.todayHolidays.TodayHolidaysService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,16 +18,22 @@ import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.REGI
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.RULES;
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.TEXT_RULES;
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.THIS_MONTH_STATS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.TODAY_HOLIDAYS;
+import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.WEEKEND;
 import static io.project.KabachokTgBot.service.telegramBot.TelegramBotConst.getCommands;
 
 public class CommandListener implements TelegramUpdateListener {
     private final Logger log = LoggerFactory.getLogger(CommandListener.class);
     private final TelegramBotService service;
     private final List<String> commands;
+    private final TodayHolidaysService todayHolidaysService;
+    private final IsDayOffService isDayOffService;
 
     public CommandListener(TelegramBotService service) {
         this.service = service;
         this.commands = getCommands();
+        this.todayHolidaysService = new TodayHolidaysService();
+        this.isDayOffService = new IsDayOffService();
     }
 
     @Override
@@ -48,6 +56,8 @@ public class CommandListener implements TelegramUpdateListener {
                     case THIS_MONTH_STATS -> service.showMonthStats(chatId);
                     case PLAYER_STATS -> service.showPlayerStats(chatId, message.from().id());
                     case PLAYER_LIST -> service.showPidorList(chatId);
+                    case TODAY_HOLIDAYS -> service.sendMessage(chatId, todayHolidaysService.get(), true);
+                    case WEEKEND -> service.sendMessage(chatId, isDayOffService.get(), true);
                     //case "/pidorlist del" -> //pidorlist del idid
                     //default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
                 }
