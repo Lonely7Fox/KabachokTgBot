@@ -9,16 +9,17 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Optional;
 
 public class TimeUtils {
 
-    private static final ZoneId zoneId = ZoneId.of("UTC+3");
+    public static final ZoneId zoneId = ZoneId.of("UTC+3");
 
-    private static final ZoneOffset zoneOffset = ZoneOffset.of("+03:00");
+    public static final ZoneOffset zoneOffset = ZoneOffset.of("+03:00");
 
-    private static final Clock clock = Clock.system(zoneId);
+    public static final Clock clock = Clock.system(zoneId);
 
     public static Timestamp now() {
         return Timestamp.from(Instant.now(clock));
@@ -29,7 +30,7 @@ public class TimeUtils {
     }
 
     public static Date todayDate() {
-        return Date.from(startDayTime().toInstant());
+        return Date.from(Instant.now(clock));
     }
 
     public static boolean checkToday(Timestamp timestamp) {
@@ -84,4 +85,31 @@ public class TimeUtils {
         return Timestamp.from(endOfDayTimestamp);
     }
 
+    public static long daysBetween(Date startDate, Date endDate) {
+        Calendar start = Calendar.getInstance();
+        Calendar end = Calendar.getInstance();
+
+        start.setTime(startDate);
+        end.setTime(endDate);
+
+        // Сбрасываем время для точности в вычислении дней
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        end.set(Calendar.HOUR_OF_DAY, 0);
+        end.set(Calendar.MINUTE, 0);
+        end.set(Calendar.SECOND, 0);
+        end.set(Calendar.MILLISECOND, 0);
+
+        // Считаем дни
+        long daysBetween = 0;
+        while (start.before(end)) {
+            start.add(Calendar.DAY_OF_MONTH, 1);
+            daysBetween++;
+        }
+
+        return daysBetween;
+    }
 }

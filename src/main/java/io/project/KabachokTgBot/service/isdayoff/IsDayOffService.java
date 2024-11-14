@@ -5,10 +5,9 @@ import io.project.KabachokTgBot.service.isdayoff.enums.DayType;
 import io.project.KabachokTgBot.service.isdayoff.enums.DirectionType;
 import io.project.KabachokTgBot.service.isdayoff.enums.LocalesType;
 import io.project.KabachokTgBot.utils.TimeUtils;
-import java.time.temporal.ChronoUnit;
 
-import java.time.Duration;
 import java.util.Date;
+
 
 public class IsDayOffService {
 
@@ -24,8 +23,7 @@ public class IsDayOffService {
 
     public String get() {
         Date date = isDayOff.getFirstDayByType(TimeUtils.todayDate(), DayType.NOT_WORKING_DAY, DirectionType.FUTURE);
-        long days = Duration.between(TimeUtils.todayDate().toInstant(), date.toInstant()).toDays();
-        return getStats(days);
+        return getStats(TimeUtils.daysBetween(TimeUtils.todayDate(), date));
     }
 
     private String getStats(long days) {
