@@ -40,7 +40,7 @@ public class TimeUtils {
     }
 
     public static Optional<Instant> checkAndGetDurationToEndDay(Timestamp timestamp) {
-        return checkToday(timestamp) ? Optional.of(timestamp.toInstant()) : Optional.empty();
+        return checkToday(timestamp) ? Optional.of(now()) : Optional.empty();
     }
 
     public static String getFormattedDuration(Instant start, Instant end) {
