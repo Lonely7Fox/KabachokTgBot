@@ -38,11 +38,11 @@ public class TelegramBotCommands {
 
         //private chats
         SetMyCommands privateCommands = new SetMyCommands(rules, todayHolidays, weekend);
-        groupCommands.scope(new BotCommandScopeAllPrivateChats());
+        privateCommands.scope(new BotCommandScopeAllPrivateChats());
 
         //group chat admins: group chat extended
-        SetMyCommands adminCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats, playerList);
-        groupCommands.scope(new BotCommandScopeAllChatAdministrators());
+        SetMyCommands adminCommands = new SetMyCommands(registration, playGame, allStats, rules, thisMonthStats, playerStats, playerList, todayHolidays, weekend);
+        adminCommands.scope(new BotCommandScopeAllChatAdministrators());
 
         List<SetMyCommands> myCommands = new ArrayList<>();
         myCommands.add(groupCommands);
