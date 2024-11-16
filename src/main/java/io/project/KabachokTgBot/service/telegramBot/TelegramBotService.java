@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -160,7 +161,7 @@ public class TelegramBotService {
         PotdChat resChat = chat.get();
         String time = checkTodayChallengeAndGetFormatTime(resChat);
         if (time != null) {
-            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - %s \uD83D\uDE0E \n Таймаут %s", getTodayChallengeWinner(resChat), time);
+            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - %s \uD83D\uDE0E \n Таймаут: %s", getTodayChallengeWinner(resChat), time);
             sendMessage(chatId, str, true);
             return;
         }
@@ -260,9 +261,9 @@ public class TelegramBotService {
 
     private @Nullable String checkTodayChallengeAndGetFormatTime(PotdChat chat) {
         for (PotdChallenge challenge : getChallengeChatList(chat)) {
-            Optional<Timestamp> time = TimeUtils.checkAndGetDurationToEndDay(challenge.getChallengeTime());
+            Optional<Instant> time = TimeUtils.checkAndGetDurationToEndDay(challenge.getChallengeTime());
             if (time.isPresent()) {
-                return TimeUtils.getFormattedDuration(Duration.between(time.get().toInstant(), TimeUtils.endDayTime().toInstant()));
+                return TimeUtils.getFormattedDuration(time.get());
             }
         }
         return null;

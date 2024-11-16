@@ -21,9 +21,10 @@ public class IsDayOffService {
                 .build();
     }
 
-    public String get() {
-        Date date = isDayOff.getFirstDayByType(TimeUtils.todayDate(), DayType.NOT_WORKING_DAY, DirectionType.FUTURE);
-        return getStats(TimeUtils.daysBetween(TimeUtils.todayDate(), date));
+    public String getMessage() {
+        Date today = TimeUtils.todayDate();
+        Date date = isDayOff.getFirstDayByType(today, DayType.NOT_WORKING_DAY, DirectionType.FUTURE);
+        return getStats(TimeUtils.daysBetween(today, date));
     }
 
     private String getStats(long days) {
@@ -33,6 +34,6 @@ public class IsDayOffService {
         if (days == 1) {
             return "До ближайшего выходного - день, осталось еще чуть чуть!";
         }
-        return "До ближайшего выходного - %d дня! Солнце еще высоко!".formatted(days);
+        return "До ближайшего выходного - %d дня(ей)! Солнце еще высоко!".formatted(days);
     }
 }

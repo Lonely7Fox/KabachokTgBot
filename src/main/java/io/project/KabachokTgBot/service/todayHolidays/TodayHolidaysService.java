@@ -26,7 +26,7 @@ public class TodayHolidaysService {
         cachedHolidays = null;
     }
 
-    public String get() {
+    public String getMessage() {
         LocalDate date = TimeUtils.todayLocalDate();
         if (today.isEqual(date) && cachedHolidays != null) {
             return cachedHolidays;

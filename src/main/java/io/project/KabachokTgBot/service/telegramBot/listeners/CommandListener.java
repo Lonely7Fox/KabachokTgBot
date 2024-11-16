@@ -56,8 +56,8 @@ public class CommandListener implements TelegramUpdateListener {
                     case THIS_MONTH_STATS -> service.showMonthStats(chatId);
                     case PLAYER_STATS -> service.showPlayerStats(chatId, message.from().id());
                     case PLAYER_LIST -> service.showPidorList(chatId);
-                    case TODAY_HOLIDAYS -> service.sendMessage(chatId, todayHolidaysService.get(), true);
-                    case WEEKEND -> service.sendMessage(chatId, isDayOffService.get(), true);
+                    case TODAY_HOLIDAYS -> service.sendMessage(chatId, todayHolidaysService.getMessage(), true);
+                    case WEEKEND -> service.sendMessage(chatId, isDayOffService.getMessage(), true);
                     //case "/pidorlist del" -> //pidorlist del idid
                     //default -> sendSilentMessage(chatId, "Пх'нглуи мглв'нафх Ктулху Р'льех вгах'нагл фхтагн");
                 }
