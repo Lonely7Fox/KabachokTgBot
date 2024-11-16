@@ -25,14 +25,6 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.3.0'
 
-	// https://mvnrepository.com/artifact/org.postgresql/postgresql
-	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.3'
-
-	implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
-
-	// https://mvnrepository.com/artifact/com.vdurmont/emoji-java
-	implementation 'com.vdurmont:emoji-java:5.1.1'
-
 	// https://mvnrepository.com/artifact/org.projectlombok/lombok
 	compileOnly 'org.projectlombok:lombok:1.18.32'
 	annotationProcessor 'org.projectlombok:lombok:1.18.32'
@@ -43,6 +35,10 @@ dependencies {
 	// https://mvnrepository.com/artifact/org.springframework/spring-context-support
 	implementation group: 'org.springframework', name: 'spring-context-support', version: '6.1.12'
 
+	// https://mvnrepository.com/artifact/org.postgresql/postgresql
+	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.3'
+
+	implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
 
 	implementation('org.quartz-scheduler:quartz:2.5.0-rc1') {
 		exclude group: 'com.mchange', module: 'c3p0'

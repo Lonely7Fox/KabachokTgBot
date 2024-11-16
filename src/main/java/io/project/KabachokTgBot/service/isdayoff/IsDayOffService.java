@@ -6,6 +6,8 @@ import io.project.KabachokTgBot.service.isdayoff.enums.DirectionType;
 import io.project.KabachokTgBot.service.isdayoff.enums.LocalesType;
 import io.project.KabachokTgBot.utils.TimeUtils;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 
 
@@ -22,18 +24,55 @@ public class IsDayOffService {
     }
 
     public String getMessage() {
-        Date today = TimeUtils.todayDate();
-        Date date = isDayOff.getFirstDayByType(today, DayType.NOT_WORKING_DAY, DirectionType.FUTURE);
-        return getStats(TimeUtils.daysBetween(today, date));
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(getStatsNearestWeekend());
+        stringBuilder.append("\n");
+        stringBuilder.append(getStatsNearNewYear());
+        return stringBuilder.toString();
     }
 
-    private String getStats(long days) {
+    private long getFutureWeekendDay() {
+        Date today = TimeUtils.todayDate();
+        Date date = isDayOff.getFirstDayByType(today, DayType.NOT_WORKING_DAY, DirectionType.FUTURE);
+        return TimeUtils.daysBetween(today, date);
+    }
+
+    private long getFutureWorkingDay() {
+        Date today = TimeUtils.todayDate();
+        Date date = isDayOff.getFirstDayByType(today, DayType.WORKING_DAY, DirectionType.FUTURE);
+        return TimeUtils.daysBetween(today, date);
+    }
+
+    private String getStatsNearestWeekend() {
+        long days = getFutureWeekendDay();
+        StringBuilder result = new StringBuilder();
+        result.append("🗿 Выходной ты где? 🗿\n");
         if (days == 0) {
-            return "Пей пива, сегодня выходной!";
+            result.append(getStatsNearestWorkingDay());
+        } else if (days == 1) {
+            result.append("До ближайшего выходного - день, осталось еще чуть чуть!");
+        } else {
+            result.append("До ближайшего выходного - %d дня(-ей)! Солнце еще высоко!".formatted(days));
         }
-        if (days == 1) {
-            return "До ближайшего выходного - день, осталось еще чуть чуть!";
+        return result.append("\n").toString();
+    }
+
+    private String getStatsNearestWorkingDay() {
+        StringBuilder result = new StringBuilder();
+        long daysToWork = getFutureWorkingDay();
+        if (daysToWork == 1) {
+            result.append("Пей пива, сегодня выходной! Завтра на работу!");
+        } else {
+            result.append("Пей пива, сегодня выходной! На работу через %d дня(-ей)!".formatted(daysToWork));
         }
-        return "До ближайшего выходного - %d дня(ей)! Солнце еще высоко!".formatted(days);
+        return result.toString();
+    }
+
+    //christmas timer
+    private String getStatsNearNewYear() {
+        LocalDate today = TimeUtils.todayLocalDate();
+        Instant newYearDate = LocalDate.of(today.getYear() + 1, 1, 1).atStartOfDay(TimeUtils.zoneId).toInstant();
+        String date = TimeUtils.getFormattedDuration(TimeUtils.now(), newYearDate);
+        return String.format("🎄 До Нового года осталось: 🎄\n%s", date);
     }
 }

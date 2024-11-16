@@ -8,7 +8,6 @@ import com.pengrad.telegrambot.request.BaseRequest;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SetMyCommands;
 import com.pengrad.telegrambot.response.BaseResponse;
-import com.vdurmont.emoji.EmojiParser;
 import io.project.KabachokTgBot.config.BotConfig;
 import io.project.KabachokTgBot.model.potd.challenge.PotdChallenge;
 import io.project.KabachokTgBot.model.potd.challenge.PotdChallengeRepository;
@@ -33,8 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -44,6 +41,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static io.project.KabachokTgBot.utils.TimeUtils.endDayTime;
 import static io.project.KabachokTgBot.utils.telegramBot.TelegramStatsUtils.getPlayersList;
 import static io.project.KabachokTgBot.utils.telegramBot.TelegramStatsUtils.getStatsMessage;
 
@@ -96,10 +94,10 @@ public class TelegramBotService {
         //add chat with player into repo
         if (getPlayer(regChat, regUser) == null) {
             PotdPlayer potdPlayer = saveNewPlayer(regChat, regUser);
-            sendMessage(chatId, ":wheelchair: Ты теперь участвуешь в игре \"Пидор Дня\" :wheelchair:", true);
+            sendMessage(chatId, "♿ Ты теперь участвуешь в игре \"Пидор Дня\" ♿", true);
             log.info("New POTD game player added: " + potdPlayer);
         } else {
-            sendMessage(chatId, "Эй, ты уже в игре! :crossed_swords: \nДважды в одну и туже реку, хех \uD83E\uDD1C \uD83D\uDC4C", true);
+            sendMessage(chatId, "⚔ Эй, ты уже в игре! ⚔", true);
         }
     }
 
@@ -161,7 +159,7 @@ public class TelegramBotService {
         PotdChat resChat = chat.get();
         String time = checkTodayChallengeAndGetFormatTime(resChat);
         if (time != null) {
-            String str = String.format("\uD83D\uDE0E На сегодня пидор уже найден и это - %s \uD83D\uDE0E \n Таймаут: %s", getTodayChallengeWinner(resChat), time);
+            String str = String.format("😎 На сегодня пидор уже найден и это - %s 😎 \n Таймаут: %s", getTodayChallengeWinner(resChat), time);
             sendMessage(chatId, str, true);
             return;
         }
@@ -169,9 +167,9 @@ public class TelegramBotService {
         List<PotdPlayer> players = getChatPlayersList(resChat);
         if (players.isEmpty() || players.size() == 1) {
             if (players.isEmpty()) {
-                sendMessage(chatId, "Поиграть не получится, никто не зарегистрован :frowning_face: ", true);
+                sendMessage(chatId, "Поиграть не получится, никто не зарегистрован 🙁", true);
             } else {
-                sendMessage(chatId, "Поиграть не получится, только один игрок зарегистрирован :frowning_face: ", true);
+                sendMessage(chatId, "Поиграть не получится, только один игрок зарегистрирован 🙁", true);
             }
             return;
         }
@@ -185,10 +183,9 @@ public class TelegramBotService {
         if (player.isPresent()) {
             saveNewChallenge(player.get(), resChat);
             generateChallengeActivityInChat(chatId, player.get().getUser().getUserName());
-            //sendMessage(chatId, ":banana: Победитель по жизни: @" + player.get().getUser().getUserName());
             return;
         }
-        sendMessage(chatId, "Что то пошло не так! :frowning_face:", true);
+        sendMessage(chatId, "Что то пошло не так! 🙁", true);
     }
 
     private void generateChallengeActivityInChat(Long chatId, String userName) {
@@ -263,7 +260,7 @@ public class TelegramBotService {
         for (PotdChallenge challenge : getChallengeChatList(chat)) {
             Optional<Instant> time = TimeUtils.checkAndGetDurationToEndDay(challenge.getChallengeTime());
             if (time.isPresent()) {
-                return TimeUtils.getFormattedDuration(time.get());
+                return TimeUtils.getFormattedDuration(time.get(), endDayTime());
             }
         }
         return null;
@@ -301,7 +298,7 @@ public class TelegramBotService {
             player.setId(userId);
             player.setName(user.firstName());
             player.setUserName(user.username());
-            player.setRegistredAt(TimeUtils.now());
+            player.setRegistredAt(TimeUtils.timeStampNow());
             return telegramUserRepository.save(player);
         } else {
             return tempUser.get();
@@ -315,7 +312,7 @@ public class TelegramBotService {
             PotdChat chatik = new PotdChat();
             chatik.setId(chatId);
             chatik.setName(chat.title());
-            chatik.setRegisteredAt(TimeUtils.now());
+            chatik.setRegisteredAt(TimeUtils.timeStampNow());
             return chatRepository.save(chatik);
         } else {
             return tempChat.get();
@@ -335,7 +332,7 @@ public class TelegramBotService {
         PotdChallenge challenge = new PotdChallenge();
         challenge.setPlayer(player);
         challenge.setChat(chat);
-        challenge.setChallengeTime(TimeUtils.now());
+        challenge.setChallengeTime(TimeUtils.timeStampNow());
         challengeRepository.save(challenge);
         return challenge;
     }
@@ -345,8 +342,8 @@ public class TelegramBotService {
 
     /* with smiles https://github-emoji-picker.vercel.app/  https://gist.github.com/ricealexander/ae8b8cddc3939d6ba212f953701f53e6 */
     public void sendMessage(long chatId, String textToSend, boolean disableNotification) {
-        SendMessage sendMessage = new SendMessage(chatId, EmojiParser.parseToUnicode(textToSend));
-        sendMessage.disableNotification(true);
+        SendMessage sendMessage = new SendMessage(chatId, textToSend);
+        sendMessage.disableNotification(disableNotification);
         execute(sendMessage);
     }
 

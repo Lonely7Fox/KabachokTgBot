@@ -1,7 +1,5 @@
 package io.project.KabachokTgBot.utils;
 
-import jdk.jfr.Experimental;
-
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,8 +17,12 @@ public class TimeUtils {
     /* Для будущих доработок, по выставлению времени, если потребуется */
     public static final ZoneId zoneId = ZoneId.systemDefault();
 
-    public static Timestamp now() {
-        return Timestamp.from(Instant.now());
+    public static Instant now() {
+        return Instant.now();
+    }
+
+    public static Timestamp timeStampNow() {
+        return Timestamp.from(now());
     }
 
     public static LocalDate todayLocalDate() {
@@ -29,7 +31,7 @@ public class TimeUtils {
 
     @Deprecated
     public static Date todayDate() {
-        return Date.from(Instant.now());
+        return Date.from(now());
     }
 
     public static boolean checkToday(Timestamp timestamp) {
@@ -41,13 +43,29 @@ public class TimeUtils {
         return checkToday(timestamp) ? Optional.of(timestamp.toInstant()) : Optional.empty();
     }
 
-    public static String getFormattedDuration(Instant time) {
-        Duration duration = Duration.between(time, endDayTime());
+    public static String getFormattedDuration(Instant start, Instant end) {
+        Duration duration = Duration.between(start, end);
         // Получаем количество дней, часов и минут
+        long days = duration.toDays();
         long hours = duration.toHours() % 24; // Остаток от деления на 24 для часов
         long minutes = duration.toMinutes() % 60; // Остаток от деления на 60 для минут
+
+        StringBuilder result = new StringBuilder();
         // Форматируем вывод
-        return hours == 0 ? String.format("%d минут(ы)", minutes) : String.format("%d час(а) %d минут(ы)", hours, minutes);
+        if (days > 1) {
+            result.append(String.format("%d дня(ей) ", days));
+        }
+        if (days == 1) {
+            result.append("день ");
+        }
+        if (hours > 1) {
+            result.append(String.format("%d час(а) %d минут(ы)", hours, minutes));
+        }
+        if (hours == 0) {
+            result.append(String.format("%d минут(ы)", minutes));
+        }
+
+        return result.toString();
     }
 
     public static boolean checkThisMonth(Timestamp timestamp) {

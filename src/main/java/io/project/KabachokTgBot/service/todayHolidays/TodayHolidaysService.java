@@ -1,6 +1,8 @@
 package io.project.KabachokTgBot.service.todayHolidays;
 
 import io.project.KabachokTgBot.httpClient.OkHttpClientImpl;
+import io.project.KabachokTgBot.logback.CacheDirProperty;
+import io.project.KabachokTgBot.utils.FileUtils;
 import io.project.KabachokTgBot.utils.TimeUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -10,26 +12,34 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Locale;
 
 public class TodayHolidaysService {
 
-    private String cachedHolidays;
-    private LocalDate today;
+    private final Path cacheFilePath;
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM").localizedBy(Locale.forLanguageTag("ru"));
 
     public TodayHolidaysService() {
-        today = LocalDate.MIN;
-        cachedHolidays = null;
+        this.cacheFilePath = Path.of(CacheDirProperty.CACHE_DIR).resolve("holidays.txt");
     }
 
     public String getMessage() {
         LocalDate date = TimeUtils.todayLocalDate();
-        if (today.isEqual(date) && cachedHolidays != null) {
-            return cachedHolidays;
+        if (checkCache()) {
+            return getCachedMessage();
         } else {
             OkHttpClientImpl client = new OkHttpClientImpl();
             String holiday = client.execute("https://www.calend.ru/rss/today-holidays.rss");
@@ -37,24 +47,27 @@ public class TodayHolidaysService {
 
             StringBuilder builder = new StringBuilder();
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM").localizedBy(Locale.forLanguageTag("ru"));
-            builder.append("Сегодня ").append(date.format(formatter)).append(" отмечают следующее:\n");
+            builder.append("Сегодня ").append(date.format(formatter)).append(" отмечают следующие праздники:\n").append("\n");
 
             Document doc = parseXMLDocument(holiday);
             NodeList list = doc.getElementsByTagName("item");
+            boolean isExist = false;
             for (int i = 0; i < list.getLength(); i++) {
                 String ui = list.item(i).getFirstChild().getTextContent(); //Title node
                 if (ui.startsWith(String.valueOf(date.getDayOfMonth()))) {
                     builder.append(ui.substring(ui.indexOf("-") + 2)); //Just holiday name
-                    builder.append(", ");
+                    builder.append("\n");
+                    isExist = true;
                 }
             }
-            builder.delete(builder.length() - 2, builder.length());
+            builder.delete(builder.length() - 1, builder.length());
             builder.append("\n");
             builder.append("https://www.calend.ru/day/%s/".formatted(date.format(DateTimeFormatter.ISO_LOCAL_DATE)));
-            today = date;
-            cachedHolidays = builder.toString();
-            return cachedHolidays;
+            String result = builder.toString();
+            if (isExist) {
+                FileUtils.writeToFile(result.getBytes(), cacheFilePath);
+            }
+            return result;
         }
     }
 
@@ -69,4 +82,20 @@ public class TodayHolidaysService {
         doc.getDocumentElement().normalize();
         return doc;
     }
+
+    private boolean checkCache() {
+        File cacheFile = new File(cacheFilePath.toAbsolutePath().toString());
+        if (!cacheFile.exists()) {
+            return false;
+        } else {
+            String todayDate = TimeUtils.todayLocalDate().format(formatter);
+            return getCachedMessage().contains(todayDate);
+        }
+    }
+
+    private String getCachedMessage() {
+        byte[] bytes = FileUtils.readBytesFromFile(cacheFilePath);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
 }
