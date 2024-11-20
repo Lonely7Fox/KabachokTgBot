@@ -8,14 +8,18 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Optional;
 
 public class TimeUtils {
 
     /* Для будущих доработок, по выставлению времени, если потребуется */
     public static final ZoneId zoneId = ZoneId.systemDefault();
+
+    public static final DateTimeFormatter ddMMMMRuPattern = DateTimeFormatter.ofPattern("dd MMMM").localizedBy(Locale.forLanguageTag("ru"));
 
     public static Instant now() {
         return Instant.now();
